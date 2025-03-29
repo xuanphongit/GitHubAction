@@ -46,7 +46,7 @@ jobs:
             git remote add github https://$GH_PAT@github.com/$GITHUB_USERNAME/$GITHUB_REPO.git
             
             # Push to GitHub
-            git push --mirror github
+            git push --force --prune origin +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*
 
             cd ..
             rm -rf $AZURE_REPO  # Cleanup
