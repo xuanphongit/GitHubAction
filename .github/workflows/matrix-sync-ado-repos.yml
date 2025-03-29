@@ -1,0 +1,41 @@
+name: Sync Multiple Azure DevOps Repos to GitHub
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # Runs daily at midnight UTC
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  sync-multiple-repos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout GitHub repo
+        uses: actions/checkout@v4
+
+      - name: Clone and Sync Multiple Repositories
+        env:
+          AZURE_ORG: "thienthutula1109"
+          AZURE_PROJECT: "phongmx"
+          GITHUB_USERNAME: "xuanphongit"
+          AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
+          GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
+          REPO_LIST: "First%20Repo Second%20Repo"  # Add your repo names here
+        run: |
+          for REPO in $REPO_LIST; do
+            echo "Syncing $REPO..."
+            
+            # Clone Azure DevOps repo
+            git clone --mirror https://$AZURE_DEVOPS_PAT@dev.azure.com/$AZURE_ORG/$AZURE_PROJECT/_git/$REPO $REPO
+
+            cd $REPO
+
+            # Add GitHub as a remote
+            git remote add github https://$GITHUB_PAT@github.com/$GITHUB_USERNAME/$REPO.git
+            
+            # Push to GitHub
+            git push --mirror github
+
+            cd ..
+            rm -rf $REPO  # Cleanup
+          done
