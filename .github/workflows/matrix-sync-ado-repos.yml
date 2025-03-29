@@ -19,7 +19,7 @@ jobs:
           AZURE_PROJECT: "phongmx"
           GITHUB_USERNAME: "xuanphongit"
           AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
-          GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
+          GH_PAT: ${{ secrets.GH_PAT }}
           AZURE_REPO_LIST: "First%20Repo Second%20Repo"  # Danh sách repo trên Azure
           GITHUB_REPO_LIST: "first-repo second-repo"  # Danh sách repo trên GitHub (tương ứng)
         run: |
@@ -43,7 +43,7 @@ jobs:
             cd $AZURE_REPO
 
             # Add GitHub as a remote
-            git remote add github https://$GITHUB_PAT@github.com/$GITHUB_USERNAME/$GITHUB_REPO.git
+            git remote add github https://$GH_PAT@github.com/$GITHUB_USERNAME/$GITHUB_REPO.git
             
             # Push to GitHub
             git push --mirror github
