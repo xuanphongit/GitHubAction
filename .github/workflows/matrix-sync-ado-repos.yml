@@ -46,7 +46,7 @@ jobs:
             git remote set-url origin "https://${GITHUB_USERNAME}:${GH_PAT}@github.com/$GITHUB_USERNAME/$GITHUB_REPO.git"
 
             # Push lên GitHub (chỉ nhánh chính và tags, bỏ refs ẩn)
-            git push --mirror --prune origin
+            git push --prune origin 'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
 
             cd ..
             rm -rf "$AZURE_REPO"
