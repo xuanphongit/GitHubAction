@@ -2,8 +2,8 @@ name: Sync Multiple Azure DevOps Repos to GitHub
 
 on:
   schedule:
-    - cron: "0 0 * * *"  # Runs daily at midnight UTC
-  workflow_dispatch:  # Allows manual trigger
+    - cron: "0 0 * * *"  # Chạy mỗi ngày lúc 00:00 UTC
+  workflow_dispatch:  # Cho phép chạy thủ công
 
 jobs:
   sync-multiple-repos:
@@ -20,22 +20,34 @@ jobs:
           GITHUB_USERNAME: "xuanphongit"
           AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
           GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
-          REPO_LIST: "First%20Repo Second%20Repo"  # Add your repo names here
+          AZURE_REPO_LIST: "First%20Repo Second%20Repo"  # Danh sách repo trên Azure
+          GITHUB_REPO_LIST: "first-repo second-repo"  # Danh sách repo trên GitHub (tương ứng)
         run: |
-          for REPO in $REPO_LIST; do
-            echo "Syncing $REPO..."
-            
-            # Clone Azure DevOps repo
-            git clone --mirror https://$AZURE_DEVOPS_PAT@dev.azure.com/$AZURE_ORG/$AZURE_PROJECT/_git/$REPO $REPO
+          AZURE_REPOS=($AZURE_REPO_LIST)
+          GITHUB_REPOS=($GITHUB_REPO_LIST)
 
-            cd $REPO
+          if [ ${#AZURE_REPOS[@]} -ne ${#GITHUB_REPOS[@]} ]; then
+            echo "⚠️ Lỗi: Số lượng repo không khớp giữa Azure và GitHub!"
+            exit 1
+          fi
+
+          for i in "${!AZURE_REPOS[@]}"; do
+            AZURE_REPO="${AZURE_REPOS[$i]}"
+            GITHUB_REPO="${GITHUB_REPOS[$i]}"
+
+            echo "🔄 Đang đồng bộ: $AZURE_REPO → $GITHUB_REPO"
+
+            # Clone Azure DevOps repo
+            git clone --mirror https://$AZURE_DEVOPS_PAT@dev.azure.com/$AZURE_ORG/$AZURE_PROJECT/_git/$AZURE_REPO $AZURE_REPO
+
+            cd $AZURE_REPO
 
             # Add GitHub as a remote
-            git remote add github https://$GITHUB_PAT@github.com/$GITHUB_USERNAME/$REPO.git
+            git remote add github https://$GITHUB_PAT@github.com/$GITHUB_USERNAME/$GITHUB_REPO.git
             
             # Push to GitHub
             git push --mirror github
 
             cd ..
-            rm -rf $REPO  # Cleanup
+            rm -rf $AZURE_REPO  # Cleanup
           done
