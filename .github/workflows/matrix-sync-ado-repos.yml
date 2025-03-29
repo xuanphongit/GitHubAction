@@ -37,17 +37,20 @@ jobs:
 
             echo "🔄 Đang đồng bộ: $AZURE_REPO → $GITHUB_REPO"
 
-            # Clone Azure DevOps repo
-            git clone --mirror "https://${AZURE_PAT}@dev.azure.com/$AZURE_ORG/$AZURE_PROJECT/_git/$AZURE_REPO" "$AZURE_REPO"
+            # Clone repo từ Azure dưới dạng bare
+            git clone --bare "https://${AZURE_PAT}@dev.azure.com/$AZURE_ORG/$AZURE_PROJECT/_git/$AZURE_REPO" "$AZURE_REPO"
 
             cd "$AZURE_REPO"
 
-            # Thay đổi remote GitHub
-            git remote set-url origin "https://${GITHUB_USERNAME}:${GH_PAT}@github.com/$GITHUB_USERNAME/$GITHUB_REPO.git"
+            # Đặt lại remote GitHub
+            git remote add github "https://${GITHUB_USERNAME}:${GH_PAT}@github.com/$GITHUB_USERNAME/$GITHUB_REPO.git"
 
-            # Push lên GitHub (chỉ nhánh chính và tags, bỏ refs ẩn)
-            git push --prune origin 'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
+            # Fetch dữ liệu mới nhất từ Azure DevOps
+            git fetch --all
+
+            # Push tất cả nhánh & tags lên GitHub, bỏ refs ẩn
+            git push --force --prune github +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*
 
             cd ..
-            rm -rf "$AZURE_REPO"
+            rm -rf "$AZURE_REPO"  # Dọn dẹp thư mục tạm
           done
