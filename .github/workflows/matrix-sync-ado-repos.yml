@@ -1,56 +1,56 @@
-name: Sync Multiple Azure DevOps Repos to GitHub
+name: Sync Multiple Azure DevOps Repos to GitHub  # Define the workflow name
 
 on:
   schedule:
-    - cron: "0 0 * * *"  # Chạy mỗi ngày lúc 00:00 UTC
-  workflow_dispatch:  # Cho phép chạy thủ công
+    - cron: "0 0 * * *"  # Run the workflow daily at midnight UTC
+  workflow_dispatch:  # Allow manual triggering of the workflow
 
 jobs:
   sync-multiple-repos:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Use the latest Ubuntu image for the job
+
+    env:
+      AZURE_ORG: "${{ vars.AZURE_ORG }}"  # Azure DevOps organization name
+      AZURE_PROJECT: "${{ vars.AZURE_PROJECT }}"  # Azure DevOps project name
+      GH_USERNAME: "${{ vars.GH_USERNAME }}"  # GitHub username
+      AZURE_DEVOPS_PAT: "${{ secrets.AZURE_DEVOPS_PAT }}"  # Azure DevOps Personal Access Token
+      GH_PAT: "${{ secrets.GH_PAT }}"  # GitHub Personal Access Token
+      AZURE_REPO_LIST: "${{ vars.AZURE_REPO_LIST }}"  # Space-separated list of Azure DevOps repositories
+      GH_REPO_LIST: "${{ vars.GH_REPO_LIST }}"  # Space-separated list of corresponding GitHub repositories
 
     steps:
-      - name: Checkout GitHub repo
+      - name: Checkout GitHub repo  # Fetch the GitHub repository code
         uses: actions/checkout@v4
 
-      - name: Clone and Sync Multiple Repositories
-        env:
-          AZURE_ORG: "thienthutula1109"
-          AZURE_PROJECT: "phongmx"
-          GITHUB_USERNAME: "xuanphongit"
-          AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
-          GH_PAT: ${{ secrets.GH_PAT }}
-          AZURE_REPO_LIST: "First%20Repo Second%20Repo"  # Danh sách repo trên Azure
-          GITHUB_REPO_LIST: "first-repo second-repo"  # Danh sách repo trên GitHub (tương ứng)
+      - name: Clone and Sync Multiple Repositories  # Clone and sync each repo
         run: |
-          AZURE_REPOS=($AZURE_REPO_LIST)
-          GITHUB_REPOS=($GITHUB_REPO_LIST)
+          AZURE_REPOS=($AZURE_REPO_LIST)  # Convert space-separated list to array
+          GH_REPOS=($GH_REPO_LIST)  # Convert space-separated list to array
 
-          if [ ${#AZURE_REPOS[@]} -ne ${#GITHUB_REPOS[@]} ]; then
-            echo "⚠️ Lỗi: Số lượng repo không khớp giữa Azure và GitHub!"
+          # Ensure the number of Azure DevOps repositories matches the number of GitHub repositories
+          if [ ${#AZURE_REPOS[@]} -ne ${#GH_REPOS[@]} ]; then
+            echo "Error: The number of Azure and GitHub repositories do not match!"
             exit 1
           fi
 
+          # Iterate through each repository pair
           for i in "${!AZURE_REPOS[@]}"; do
-            AZURE_REPO="${AZURE_REPOS[$i]}"
-            GITHUB_REPO="${GITHUB_REPOS[$i]}"
+            AZURE_REPO="${AZURE_REPOS[$i]}"  # Get Azure DevOps repo name
+            GH_REPO="${GH_REPOS[$i]}"  # Get corresponding GitHub repo name
 
-            echo "🔄 Đang đồng bộ: $AZURE_REPO → $GITHUB_REPO"
+            # Clone the Azure DevOps repository as a bare repository
+            git clone --bare "https://${AZURE_DEVOPS_PAT}@dev.azure.com/$AZURE_ORG/$AZURE_PROJECT/_git/$AZURE_REPO" "$AZURE_REPO"
+            cd "$AZURE_REPO"  # Navigate into the repository directory
 
-            # Clone repo từ Azure dưới dạng bare
-            git clone --bare "https://${AZURE_PAT}@dev.azure.com/$AZURE_ORG/$AZURE_PROJECT/_git/$AZURE_REPO" "$AZURE_REPO"
+            # Add GitHub as a remote repository
+            git remote add github "https://${GH_USERNAME}:${GH_PAT}@github.com/$GH_USERNAME/$GH_REPO.git"
 
-            cd "$AZURE_REPO"
-
-            # Đặt lại remote GitHub
-            git remote add github "https://${GITHUB_USERNAME}:${GH_PAT}@github.com/$GITHUB_USERNAME/$GITHUB_REPO.git"
-
-            # Fetch dữ liệu mới nhất từ Azure DevOps
+            # Fetch all branches and tags from Azure DevOps
             git fetch --all
 
-            # Push tất cả nhánh & tags lên GitHub, bỏ refs ẩn
+            # Push all branches and tags to GitHub
             git push --force --prune github +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*
 
-            cd ..
-            rm -rf "$AZURE_REPO"  # Dọn dẹp thư mục tạm
+            cd ..  # Move back to the parent directory
+            rm -rf "$AZURE_REPO"  # Remove the cloned repository to clean up
           done
